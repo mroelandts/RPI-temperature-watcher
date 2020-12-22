@@ -1,65 +1,49 @@
 #!/usr/bin/env python
 
-'''
-FILE NAME
-env_log.py
-1. WHAT IT DOES
-Takes a reading from a DHT sensor and records the values in an SQLite3 database using a Raspberry Pi.
- 
-2. REQUIRES
-* Any Raspberry Pi
-* A DHT sensor
-* A 10kOhm resistor
-* Jumper wires
-3. ORIGINAL WORK
-Raspberry Full stack 2015, Peter Dalmaris
-4. HARDWARE
-D17: Data pin for sensor
-5. SOFTWARE
-Command line terminal
-Simple text editor
-Libraries:
+import pwd
+import grp
+import os
+import stat
 import sqlite3
-import sys
-import Adafruit_DHT
-6. WARNING!
-None
-7. CREATED 
-8. TYPICAL OUTPUT
-No text output. Two new records are inserted in the database when the script is executed
- // 9. COMMENTS
---
- // 10. END
-'''
+
+from common import get_bme280_values, DB_PATH
 
 
+def save_to_db(sensor_id: str, temp: float, hum: float) -> None:
+    # open db
+    conn = sqlite3.connect(DB_PATH)
+    curs = conn.cursor()
 
-import sqlite3
-import sys
-import Adafruit_DHT
+    # create table
+    curs.execute("CREATE TABLE IF NOT EXISTS temperature (id integer PRIMARY KEY AUTOINCREMENT, timestamp datetime, "
+                 "sensor_id text, value numeric);")
+    curs.execute("CREATE TABLE IF NOT EXISTS humidity (id integer PRIMARY KEY AUTOINCREMENT, timestamp datetime, "
+                 "sensor_id text, value numeric);")
 
-def log_values(sensor_id, temp, hum):
-	conn=sqlite3.connect('/var/www/lab_app/lab_app.db')  #It is important to provide an
-							     #absolute path to the database
-							     #file, otherwise Cron won't be
-							     #able to find it!
-	curs=conn.cursor()
-	curs.execute("""INSERT INTO temperatures values(datetime(CURRENT_TIMESTAMP, 'localtime'),
-         (?), (?))""", (sensor_id,temp))
-	curs.execute("""INSERT INTO humidities values(datetime(CURRENT_TIMESTAMP, 'localtime'),
-         (?), (?))""", (sensor_id,hum))
-	conn.commit()
-	conn.close()
+    # add new data
+    curs.execute("INSERT INTO temperature (timestamp, sensor_id, value) VALUES "
+                 "(datetime(CURRENT_TIMESTAMP, 'localtime'),?,?)", (sensor_id, temp))
+    curs.execute("INSERT INTO humidity (timestamp, sensor_id, value) VALUES "
+                 "(datetime(CURRENT_TIMESTAMP, 'localtime'),?,?)", (sensor_id, hum))
 
-humidity, temperature = Adafruit_DHT.read_retry(Adafruit_DHT.AM2302, 17)
-temperature = temperature * 9/5.0 + 32
-# If you don't have a sensor but still wish to run this program, comment out all the 
-# sensor related lines, and uncomment the following lines (these will produce random
-# numbers for the temperature and humidity variables):
-# import random
-# humidity = random.randint(1,100)
-# temperature = random.randint(10,30)
-if humidity is not None and temperature is not None:
-	log_values("1", temperature, humidity)	
-else:
-	log_values("1", -999, -999)
+    # close db
+    conn.commit()
+    conn.close()
+
+
+if __name__ == '__main__':
+    # get temperature and humidity
+    temperature, humidity = get_bme280_values()
+    # print(humidity)
+    # print(temperature)
+
+    if humidity is not None and temperature is not None:
+        save_to_db("1", temperature, humidity)
+    else:
+        save_to_db("1", -999, -999)
+
+    # make sure the db is owned by www-data
+    uid = pwd.getpwnam("www-data").pw_uid
+    gid = grp.getgrnam("www-data").gr_gid
+    os.chown(DB_PATH, uid, gid)
+    os.chmod(DB_PATH, stat.S_IREAD | stat.S_IWRITE | stat.S_IRGRP | stat.S_IWGRP)
