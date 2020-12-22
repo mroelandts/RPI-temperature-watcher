@@ -1,41 +1,60 @@
-## Introduction
-Web server using a Raspberry Pi and DHT22 sensor to graph the humidity and temperature in my apartment over time. The data can be accessed over a web browser.
+# RPI temperature watcher
 
-Skills I learned during this project:
-- Setup the minimal Raspbian operating system to the RPi, called Minibian
-- Install and use Python, and the Python virtual environment
-- Install and use Flask, a Python-based web micro-framework
-- Install and use uWSGI as the application server for Flask
-- Install and use Nginx light-weight web server
-- Use Skeleton to make the web UI look better
-- Use the RPi GPIOs as digital input and outputs
-- Use a DHT22 humidity and temperature sensor
-- Install and use the SQLite database to store sensor data
-- Add a cron job to store sensor data every so many minutes
-- Use the Google Chart API to create visual representations of the sensor data
-- Use Javascript/JQuery to add interactivity to web pages
-- Use Plotly for graphical analysis of sensor data
+## Introduction
+Web server using a Raspberry Pi and BME280 sensor to graph the humidity and temperature over time. The data can be accessed over a web browser.
+
+## Setup
+```bash
+sudo raspi-config
+# enable I2S
+```
+Run full setup
+```bash
+./setup.sh
+```
 
 ## Summary
 
-The `lab_app` folder contains the code for the project (The html folder, button.py, and blink.py were just for testing purposes).
+The `temp_app.py` is the flask application that creates the webpages. This flask app will be loaded by the fastcgi plugin of lighttpd.
 
-Inside `lab_app` you will find the main python server, `lab_app.py`. This uses a cronjob to take a temperature and humidity reading every so many minutes, and stores it in a sqlite database. The web server has 2 views, `lab_temp.html` and `lab_env_db.html`, which I refer to as current view and historic view respectively.
+The database will be filled by a cronjob that triggers the python script `append_db.py` every x minutes (5min).
 
-## Current
+The webserver has 2 views, `temp.html` and `temp_db.html`, which I are the home page and the history page.
+
+### Home page
 
 In the current view, the current temperature and humidity taken from the sensor is displayed on the web page. This page updates every 10 seconds, and has a link to the historic view.
 
-## Historic
+### History page
 
-The historic view has a couple features. The first is a to and from date input, which uses a date time picker plugin. Combined with a submit button, this allows you to view the temperature and humidity data within any date time range easily. The next feature are four radio buttons, to easily see the last 3, 6, 12, and 24 hours of data. There are two links, one to the current view, and another to export the data to Plotly. Clicking this link will send you to plotly and show you a graph of Temperature vs Humidity.
+The history view has a couple features. The first is a to and from date input, which uses a date time picker plugin. Combined with a submit button, this allows you to view the temperature and humidity data within any date time range easily. The next feature are four radio buttons, to easily see the last 3, 6, 12, and 24 hours of data. There is also a link to go abck to the home page.
 
 The main view are 2 tables combined with Google Charts graphs. The tables both scroll, and the charts display data across the time selected. The times are displayed in your own time zone, as it is determined from your browser.
 
-## YouTube
+## Usage
+Manual test webserver
+```bash
+source venv/bin/activate
+python3 temp_app.py
+```
 
-YouTube: https://www.youtube.com/watch?v=hFqNiZ4p0Ss
+Manual messurement to db
+```bash
+./cron_trigger.sh
+```
+
+Take a peak at the db db
+```bash
+venv/bin/python get_data.py
+```
+
+## Info
+* [GitHub - bme280-python](https://github.com/pimoroni/bme280-python)
+* [GitHub - Pi-Temp](https://github.com/cwalk/Pi-Temp.git)
+* [GitHub - RPI-Flask-SQLite](https://github.com/Mjrovai/RPI-Flask-SQLite)
+* [GitHub gist - lighttpd flask](https://gist.github.com/brucebot/85b7022f32d640180c482123df0ce658)
+* [gauge website](https://ukmesh.org/2020/01/26/raspberry-pi-dht22-temp-sensor-and-web-server)
 
 ## Circuit Diagram
 
-![Circuit Diagram](/Circuit.png?raw=true "Circuit Diagram")
+![Circuit Diagram](circuit.jpg)
