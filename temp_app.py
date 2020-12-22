@@ -54,7 +54,7 @@ app.debug = True # Make this False if you are no longer debugging
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return render_template('hello.html', message="Hello World!")
 
 @app.route("/lab_temp")
 def lab_temp():
