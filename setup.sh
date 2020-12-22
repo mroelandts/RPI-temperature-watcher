@@ -18,6 +18,7 @@ sudo mkdir -p /var/www/temp_app
 sudo cp -r ./venv /var/www/temp_app/
 sudo cp ./*.py /var/www/temp_app/
 sudo cp ./*.sh /var/www/temp_app/
+sudo cp ./*.fcgi /var/www/temp_app/
 sudo rm /var/www/temp_app/setup.sh
 sudo cp -r ./static/ /var/www/temp_app/
 sudo cp -r ./templates/ /var/www/temp_app/
@@ -35,5 +36,12 @@ sudo crontab -l | grep -v /var/www/temp_app/cron_trigger.sh > /tmp/cron-jobs.txt
 echo "*/5 * * * * /var/www/temp_app/cron_trigger.sh" >> /tmp/cron-jobs.txt
 sudo cron /tmp/cron-jobs.txt
 # if you setup cron as user pi, the database will struggle with permissions
+
+# configure lighttpd
+sudo cp 98-temperature-fastcgi.conf /etc/lighttpd/conf-available/
+sudo lighty-enable-mod rewrite
+sudo lighty-enable-mod temperature-fastcgi
+lighttpd -t -f /etc/lighttpd/lighttpd.conf
+sudo systemctl restart lighttpd.service
 
 exit 0
