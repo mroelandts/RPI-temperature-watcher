@@ -3,19 +3,30 @@
 # fail on error
 set -e
 
-# install dep
-sudo apt install python3 virtualenv lighttpd
-
-# create virtualenv
-if [ ! -d "venv" ]; then
-  virtualenv -p python3 venv
+# check if update
+DEV=0
+if [ $1 = "update" ]; then
+    DEV=1
+    echo "Only updating files."
 fi
-source venv/bin/activate
-pip3 install -r requirements.txt
+
+if [ ${DEV} -eq 0 ]; then
+    # install dep
+    sudo apt install python3 virtualenv lighttpd
+
+    # create virtualenv
+    if [ ! -d "venv" ]; then
+         virtualenv -p python3 venv
+    fi
+    source venv/bin/activate
+    pip3 install -r requirements.txt
+fi
 
 # create folder and place files
 sudo mkdir -p /var/www/temp_app
-sudo cp -r ./venv /var/www/temp_app/
+if [ ${DEV} -eq 0 ]; then
+    sudo cp -r ./venv /var/www/temp_app/
+fi
 sudo cp ./*.py /var/www/temp_app/
 sudo cp ./*.sh /var/www/temp_app/
 sudo cp ./*.fcgi /var/www/temp_app/
@@ -25,11 +36,13 @@ sudo cp -r ./templates/ /var/www/temp_app/
 sudo chmod 775 /var/www/temp_app/
 sudo chown -R www-data:www-data /var/www/temp_app
 
-# pi should be in www-data group
-sudo gpasswd -a pi www-data
+if [ ${DEV} -eq 0 ]; then
+    # pi should be in www-data group
+    sudo gpasswd -a pi www-data
 
-# www-date need to access i2c
-sudo usermod -a -G i2c www-data
+    # www-date need to access i2c
+    sudo usermod -a -G i2c www-data
+fi
 
 # setup cron (root)
 sudo crontab -l | grep -v /var/www/temp_app/cron_trigger.sh > /tmp/cron-jobs.txt
