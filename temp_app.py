@@ -5,9 +5,9 @@ import datetime
 import arrow
 import sqlite3
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 
-from common import DB_PATH, get_bme280_values
+from common import DB_PATH, get_bme280_values, bash_exec
 
 app = Flask(__name__)
 app.debug = True
@@ -15,7 +15,7 @@ app.debug = True
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return redirect('/temp')
 
 
 @app.route("/temp")
@@ -52,6 +52,18 @@ def get_temp_db():
                            temp_items=len(temperature_list),
                            query_string=request.query_string,
                            hum_items=len(humidity_list))
+
+
+@app.route("/settings")
+def get_settings():
+    return render_template("settings.html")
+
+
+@app.route("/goodbye")
+def get_goodbye():
+    # trigger a delayed shutdown
+    bash_exec('sudo slow_poweroff.sh', capture_output=False, wait_for_exit=False)
+    return render_template("goodbye.html")
 
 
 def get_records():

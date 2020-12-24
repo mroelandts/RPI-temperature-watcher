@@ -36,6 +36,7 @@ sudo cp -r ./templates/ /var/www/temp_app/
 sudo chmod 775 /var/www/temp_app/
 sudo chown -R www-data:www-data /var/www/temp_app
 
+# user groups
 if [ ${DEV} -eq 0 ]; then
     # pi should be in www-data group
     sudo gpasswd -a pi www-data
@@ -44,17 +45,29 @@ if [ ${DEV} -eq 0 ]; then
     sudo usermod -a -G i2c www-data
 fi
 
+# slow_poweroff
+sudo cp slow_poweroff.sh /usr/local/bin/slow_poweroff.sh
+
+# www-data needs to run sudo for slow_poweroff
+sudo cp 010_www-data-poweroff /etc/sudoers.d/010_www-data-poweroff
+sudo chmod 440 /etc/sudoers.d/010_www-data-poweroff
+sudo chown root:root /etc/sudoers.d/010_www-data-poweroff
+
 # setup cron (root)
-sudo crontab -l | grep -v /var/www/temp_app/cron_trigger.sh > /tmp/cron-jobs.txt
-echo "*/5 * * * * /var/www/temp_app/cron_trigger.sh" >> /tmp/cron-jobs.txt
-sudo cron /tmp/cron-jobs.txt
-# if you setup cron as user pi, the database will struggle with permissions
+if [ ${DEV} -eq 0 ]; then
+    # if you setup cron as user pi, the database will struggle with permissions
+    sudo crontab -l | grep -v /var/www/temp_app/cron_trigger.sh > /tmp/cron-jobs.txt
+    echo "*/5 * * * * /var/www/temp_app/cron_trigger.sh" >> /tmp/cron-jobs.txt
+    sudo cron /tmp/cron-jobs.txt
+fi
 
 # configure lighttpd
-sudo cp 98-temperature-fastcgi.conf /etc/lighttpd/conf-available/
-sudo lighty-enable-mod rewrite
-sudo lighty-enable-mod temperature-fastcgi
-lighttpd -t -f /etc/lighttpd/lighttpd.conf
+if [ ${DEV} -eq 0 ]; then
+    sudo cp 98-temperature-fastcgi.conf /etc/lighttpd/conf-available/
+    sudo lighty-enable-mod rewrite
+    sudo lighty-enable-mod temperature-fastcgi
+    lighttpd -t -f /etc/lighttpd/lighttpd.conf
+fi
 sudo systemctl restart lighttpd.service
 
 exit 0
